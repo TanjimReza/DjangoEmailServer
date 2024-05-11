@@ -1,0 +1,34 @@
+{% for email in emails %}
+
+<div
+  class="flex flex-col items-center justify-center gap-2 px-3 py-4 bg-gray-100 rounded-md md:grid md:grid-cols-4 md:gap-4 md:bg-gray-100 md:rounded-md md:space-y-0"
+>
+  <div
+    class="flex items-center justify-center px-8 py-2 w-full bg-white rounded-md md:px-0 md:py-0 md:bg-gray-100 md:w-"
+  >
+    <span class="text-sm font-medium">{{email.date_time}}</span>
+  </div>
+  <div
+    class="flex items-center justify-center px-8 py-2 w-full bg-white rounded-md md:px-0 md:py-0 md:bg-gray-100 md:w-"
+  >
+    <span class="text-sm font-medium">{{email.to_email}}</span>
+  </div>
+  <div
+    class="flex items-center justify-center px-8 py-2 w-full bg-white rounded-md md:px-0 md:py-0 md:bg-gray-100 md:w-"
+  >
+    <span
+      class="text-sm font-medium bg-blue-100 text-blue-800 px-8 py-1 rounded-lg"
+      >{{email.tag}}</span
+    >
+  </div>
+  <div
+    class="flex items-center justify-center md:justify-end px-8 py-2 bg-white w-full rounded-md md:px-0 md:py-0 md:bg-gray-100 md:w-"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 rounded-md px-3 bg-blue-500 text-white"
+    >
+      GET CODE
+    </button>
+  </div>
+</div>
+{% endfor %}

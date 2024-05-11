@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login Page</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,300&family=Sedan:ital@0;1&display=swap"
+        rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        "clifford": "#da373d",
+                        "background": "hsl(0, 0%, 100%)",
+                        "foreground": "hsl(240, 10%, 3.9%)",
+                        "card": "hsl(0, 0%, 100%)",
+                        "card-foreground": " hsl(240, 10%, 3.9%)",
+                        "popover": "hsl(0, 0%, 100%)",
+                        "popover-foreground": " hsl(240, 10%, 3.9%)",
+                        "primary": "hsl(240, 5.9%, 10%)",
+                        "primary-foreground": " hsl(0, 0%, 98%)",
+                        "secondary": "hsl(240, 4.8%, 95.9%)",
+                        "secondary-foreground": " hsl(240, 5.9%, 10%)",
+                        "muted": "hsl(240, 4.8%, 95.9%)",
+                        "muted-foreground": " hsl(240, 3.8%, 46.1%)",
+                        "accent": "hsl(240, 4.8%, 95.9%)",
+                        "accent-foreground": " hsl(240, 5.9%, 10%)",
+                        "destructive": "hsl(0, 84.2%, 60.2%)",
+                        "destructive-foreground": " hsl(0, 0%, 98%)",
+                        "border": "hsl(240, 5.9%, 90%)",
+                        "input": "hsl(240, 5.9%, 90%)",
+                        "ring": "hsl(240, 5.9%, 10%)",
+                    },
+                },
+                fontFamily: {
+                    lato: ["Lato", "sans-serif"],
+                    sedan: ["Sedan", "sans-serif"],
+                },
+            },
+        };
+    </script>
+</head>
+
+<body class="bg-background flex justify-center items-center h-screen">
+    <div class="rounded-lg border bg-card text-card-foreground shadow-sm max-w-sm">
+        <div class="flex flex-col space-y-1.5 p-6">
+            <h3 class="whitespace-nowrap font-semibold tracking-tight text-2xl">
+                Login
+            </h3>
+            <p class="text-sm text-muted-foreground">
+                Enter your email below to login to your account
+            </p>
+        </div>
+        <div class="p-6">
+            <div class="grid gap-4">
+                <div class="grid gap-2">
+                    <label
+                        class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        for="email">Email</label>
+                    <input
+                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        type="email" id="email" placeholder="m@example.com" required="" />
+                </div>
+                <div class="grid gap-2">
+                    <div class="flex items-center">
+                        <label
+                            class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            for="password">Password</label>
+                        <a class="ml-auto inline-block text-sm underline" href="#">
+                            Forgot your password?
+                        </a>
+                    </div>
+                    <input
+                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        type="password" id="password" required="" />
+                </div>
+                <button
+                    class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full"
+                    type="submit">
+                    Login
+                </button>
+                <button
+                    class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 w-full">
+                    Login with Google
+                </button>
+            </div>
+            <div class="mt-4 text-center text-sm">
+                Don't have an account? <a class="underline" href="#"> Sign up </a>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

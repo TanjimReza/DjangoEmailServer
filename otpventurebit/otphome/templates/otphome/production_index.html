@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login Page</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,300&family=Sedan:ital@0;1&display=swap"
+        rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        clifford: "#da373d",
+                        background: "hsl(0, 0%, 100%)",
+                        foreground: "hsl(240, 10%, 3.9%)",
+                        card: "hsl(0, 0%, 100%)",
+                        "card-foreground": " hsl(240, 10%, 3.9%)",
+                        popover: "hsl(0, 0%, 100%)",
+                        "popover-foreground": " hsl(240, 10%, 3.9%)",
+                        primary: "hsl(240, 5.9%, 10%)",
+                        "primary-foreground": " hsl(0, 0%, 98%)",
+                        secondary: "hsl(240, 4.8%, 95.9%)",
+                        "secondary-foreground": " hsl(240, 5.9%, 10%)",
+                        muted: "hsl(240, 4.8%, 95.9%)",
+                        "muted-foreground": " hsl(240, 3.8%, 46.1%)",
+                        accent: "hsl(240, 4.8%, 95.9%)",
+                        "accent-foreground": " hsl(240, 5.9%, 10%)",
+                        destructive: "hsl(0, 84.2%, 60.2%)",
+                        "destructive-foreground": " hsl(0, 0%, 98%)",
+                        border: "hsl(240, 5.9%, 90%)",
+                        input: "hsl(240, 5.9%, 90%)",
+                        ring: "hsl(240, 5.9%, 10%)",
+                    },
+                },
+                fontFamily: {
+                    lato: ["Lato", "sans-serif"],
+                    sedan: ["Sedan", "sans-serif"],
+                },
+            },
+        };
+    </script>
+    <script src="https://tanjimreza.com/htmx.min.js"></script>
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const form = document.getElementById("otp-form");
+        const submitButton = document.getElementById("submit-button");
+        submitButton.addEventListener("click", function (event) {
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            // Assuming the backend sets session or similar to indicate first successful submit
+            if (!form.hasAttribute("hx-trigger")) {
+                form.setAttribute("hx-trigger", "every 1s from:this");
+                htmx.process(form);
+            }
+            htmx.trigger(form, "submit", { target: form });
+        });
+    });
+    
+</script>
+<script>
+    document.body.addEventListener("htmx:beforeRequest", function (event) {
+        document.getElementById("spinner").classList.remove("hidden");
+    });
+    document.body.addEventListener("htmx:afterRequest", function (event) {
+        document.getElementById("spinner").classList.add("hidden");
+    });
+</script>
+</head>
+
+<body class="min-h-screen flex justify-center py-12">
+    <div class="mx-auto max-w-6xl bg-white p-8 rounded-md shadow-md">
+        <div class="flex flex-col md:flex-row gap-2 justify-between items-center mb-6">
+            <div class="flex items-center space-x-2">
+                <button
+                    class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 bg-blue-500 text-white">
+                    Auto OTP
+                </button>
+                <span class="text-sm text-gray-500">Version alpha.0.1</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded-full">Auto Refresh Enabled</span>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <h1 class="text-2xl font-semibold mb-2">
+                Getting info for 'Profile Name'
+            </h1>
+
+            <form action="" id="otp-form" hx-post="{% url 'hx' %}" hx-target="#result" hx-indicator="#spinner"
+                method="post">
+                {% csrf_token %}
+                <div class="flex flex-col space-y-2 items-center md:flex-row md:space-x-2 md:space-y-0">
+                    <input name="profile_name" required
+                        class="flex h-10 w-full border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 rounded-md"
+                        placeholder="Profile Name" />
+                    <input name="profile_email" required
+                        class="flex h-10 w-full border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 rounded-md"
+                        placeholder="Email Address" />
+                    <button id="submit-button" type="button"
+                        class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-8 py-2">
+                        GET OTP
+                    </button>
+                </div>
+            </form>
+        </div>
+        <div class="flex items-center justify-center">
+            <p>Auto updating</p>
+            <svg id="spinner" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                aria-live="polite" aria-busy="false" class="hidden">
+                <!-- Initially hidden -->
+                <path d="M7 10H3V14H7V10Z" class="fill-emerald-500 animate-bounce" style="animation-delay: 0s" />
+                <path d="M14 10H10V14H14V10Z" class="fill-emerald-500 animate-bounce" style="animation-delay: 0.2s" />
+                <path d="M21 10H17V14H21V10Z" class="fill-emerald-500 animate-bounce" style="animation-delay: 0.4s" />
+            </svg>
+        </div>
+
+        <div id="result">
+            
+        </div>
+    </div>
+</body>
+
+
+</html>

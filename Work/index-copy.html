@@ -1,0 +1,159 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        clifford: '#da373d',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-white-100 flex justify-center">
+
+    <div id="container" class="flex flex-col justify-center items-center p-4 max-w-2xl">
+        <!-- Component: Chip notification with leading button -->
+        <div class="inline-flex items-center gap-4 rounded border border-slate-200 bg-white/50 p-0.5 pr-4">
+            <button
+                class="inline-flex items-center justify-center h-8 gap-2 px-4 text-xs font-medium tracking-wide text-white transition duration-300 rounded whitespace-nowrap bg-zinc-500 hover:bg-zinc-600 focus:bg-zinc-700 focus-visible:outline-none disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-300 disabled:shadow-none">
+                <span>Auto OTP</span>
+            </button>
+            <div class="flex items-center gap-1 text-slate-500">
+                <!-- Text displayed in big screens -->
+                <span class="hidden md:block">
+                    Version alpha0.1
+                </span>
+                <!-- Text displayed in big screens -->
+                <span class="block md:hidden">0.1-alpha</span>
+            </div>
+        </div>
+        <!-- End Chip notification with leading button -->
+
+        <div class="inline-flex items-center justify-center">
+            <p class="p-2">Getting info for `Profile Name`</p>
+        </div>
+        <!-- Component: Success Alert With Icon -->
+        <div class="flex items-center justify-center w-full gap-4 px-4 py-3 text-sm border rounded border-emerald-100 bg-emerald-50 text-emerald-500"
+            role="alert">
+            <!-- Icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor" stroke-width="1.5" role="graphics-symbol" aria-labelledby="title-01 desc-01">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+
+            <!-- Text -->
+            <p class="text-md">Auto Refresh Enabled</p>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                aria-live="polite" aria-busy="true">
+                <path d="M7 10H3V14H7V10Z" class="fill-zinc-500 animate animate-bounce " />
+                <path d="M14 10H10V14H14V10Z" class="fill-zinc-500 animate animate-bounce  [animation-delay:.2s]" />
+                <path d="M21 10H17V14H21V10Z" class="fill-zinc-500 animate animate-bounce  [animation-delay:.4s]" />
+            </svg>
+        </div>
+        <!-- End Success Alert With Icon -->
+
+        <h4 class="text-xl">Latest OTP</h4>
+        <!-- Component: Borderless Table -->
+        <div>
+            <table class="text-left border border-separate rounded border-slate-200" cellspacing="0">
+                <tbody>
+                    <tr class="block border-b sm:table-row last:border-b-0 border-slate-200 sm:border-none">
+                        <td data-th="TimeStamp"
+                            class="before:w-24 before:inline-block before:font-medium before:text-slate-700 before:content-[attr(data-th)':'] sm:before:content-none flex items-center sm:table-cell h-12 px-6 text-sm transition duration-300 sm:border-t sm:border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            {{2024-05-06 08:32:01}}</td>
+                        <td data-th="Email"
+                            class="before:w-24 before:inline-block before:font-medium before:text-slate-700 before:content-[attr(data-th)':'] sm:before:content-none flex items-center sm:table-cell h-12 px-6 text-sm transition duration-300 sm:border-t sm:border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            {{venturebitbd.03@gmail.com}}</td>
+                        <td data-th="Profile"
+                            class="before:w-24 before:inline-block before:font-medium before:text-slate-700 before:content-[attr(data-th)':'] sm:before:content-none flex items-center sm:table-cell h-12 px-6 text-sm transition duration-300 sm:border-t sm:border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            {{profile}}</td>
+                        <td data-th="OTP Link"
+                            class="before:w-24 before:inline-block before:font-medium before:text-slate-700 before:content-[attr(data-th)':'] sm:before:content-none flex items-center sm:table-cell h-12 px-6 text-sm transition duration-300 sm:border-t sm:border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            {{GET OTP}}</td>
+                    </tr>
+
+                </tbody>
+            </table>
+        </div>
+        <!-- End Responsive Table -->
+
+        <!-- End Borderless Table -->
+
+        <h4 class="text-xl">Previous OTP (Expired)</h4>
+
+        <!-- Component: Compact Table -->
+        <div class="">
+            <table class="text-left border border-separate rounded border-slate-200" cellspacing="0">
+                <tbody>
+                    <tr>
+                        <td
+                            class="h-10 px-4 text-sm transition duration-300 border-t border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            Ayub Salas</td>
+                        <td
+                            class="h-10 px-4 text-sm transition duration-300 border-t border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            Designer</td>
+                        <td
+                            class="h-10 px-4 text-sm transition duration-300 border-t border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            Carroll Group</td>
+                        <td
+                            class="h-10 px-4 text-sm transition duration-300 border-t border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            Member</td>
+                        <td
+                            class="h-10 px-4 text-sm transition duration-300 border-t border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            salas_a</td>
+                    </tr>
+                    <tr>
+                        <td
+                            class="h-10 px-4 text-sm transition duration-300 border-t border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            Ayub Salas</td>
+                        <td
+                            class="h-10 px-4 text-sm transition duration-300 border-t border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            Designer</td>
+                        <td
+                            class="h-10 px-4 text-sm transition duration-300 border-t border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            Carroll Group</td>
+                        <td
+                            class="h-10 px-4 text-sm transition duration-300 border-t border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            Member</td>
+                        <td
+                            class="h-10 px-4 text-sm transition duration-300 border-t border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            salas_a</td>
+                    </tr>
+                    <tr>
+                        <td
+                            class="h-10 px-4 text-sm transition duration-300 border-t border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            Ayub Salas</td>
+                        <td
+                            class="h-10 px-4 text-sm transition duration-300 border-t border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            Designer</td>
+                        <td
+                            class="h-10 px-4 text-sm transition duration-300 border-t border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            Carroll Group</td>
+                        <td
+                            class="h-10 px-4 text-sm transition duration-300 border-t border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            Member</td>
+                        <td
+                            class="h-10 px-4 text-sm transition duration-300 border-t border-l first:border-l-0 border-slate-200 stroke-slate-500 text-slate-500 ">
+                            salas_a</td>
+                    </tr>
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <!-- End Compact Table -->
+    </div>
+
+</body>
+
+</html>

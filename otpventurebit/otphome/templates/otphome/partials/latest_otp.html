@@ -1,0 +1,49 @@
+{% for email in otp_emails %}
+
+<div
+  class="mb-1 flex flex-col items-center justify-center gap-2 px-3 py-4 bg-gray-100 rounded-md md:grid md:grid-cols-5 md:gap-4 md:bg-gray-100 md:rounded-md md:space-y-0"
+>
+  <div
+    class="flex items-center justify-center px-8 py-2 w-full bg-white rounded-md md:px-0 md:py-0 md:bg-gray-100 md:w-"
+  >
+    <span class="text-sm font-medium">{{email.date_time}}</span>
+  </div>
+  <div
+    class="flex items-center justify-center px-8 py-2 w-full bg-white rounded-md md:px-0 md:py-0 md:bg-gray-100 md:w-"
+  >
+    <span class="text-sm font-medium">{{email.to_email}}</span>
+  </div>
+  <div
+    class="flex items-center justify-center px-8 py-2 w-full bg-white rounded-md md:px-0 md:py-0 md:bg-gray-100 md:w-"
+  >
+    <span
+      class="text-sm font-medium bg-blue-100 text-blue-800 px-8 py-1 rounded-lg"
+      >{{email.tag}}</span
+    >
+  </div>
+  <div
+    class="flex items-center justify-center px-8 py-2 w-full bg-white rounded-md md:px-0 md:py-0 md:bg-gray-100 md:w-"
+  >
+    <span
+      class="text-sm font-medium bg-pink-100 text-pink-800 px-8 py-1 rounded-lg"
+      >{{email.login_otp}}</span
+    >
+  </div>
+  <div
+    class="flex items-center justify-center px-8 py-2 bg-white w-full rounded-md md:px-0 md:py-0 md:bg-gray-100 md:w-"
+  >
+    <!-- Component: Info Alert With Icon -->
+    <div class="flex items-start w-full gap-4 px-2 py-2 text-sm border rounded border-rose-100 bg-rose-50 text-rose-500" role="alert">
+      <!-- Icon -->
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" role="graphics-symbol" aria-labelledby="title-03 desc-03">
+        <title id="title-03">Icon title</title>
+        <desc id="desc-03">A more detailed description of the icon</desc>
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+      </svg>
+      <!-- Text -->
+      <p>Use this code to login</p>
+    </div>
+    <!-- End Info Alert With Icon -->
+  </div>
+</div>
+{% endfor %}
