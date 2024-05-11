@@ -159,3 +159,47 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 #         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
 #     },
 # }
+
+# All messages (DEBUG and above) will appear in the console.
+# Only WARNING and above messages will be written to debug.log in the root of your project.
+# logger.debug('This is a debug message')
+# logger.info('This is an info message')
+# logger.warning('This is a warning message')
+# logger.error('This is an error message')
+# logger.critical('This is a critical message')
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '{levelname}-{asctime}-{message}',
+            'style': '{',
+            'datefmt': '%d:%m:%Y: %H:%M:%S'
+        },
+        'console': {
+            'format': '{levelname} : {message}',
+            'style': '{',
+        }
+    },
+    'handlers': {
+        'console': {
+            'level': 'WARNING',
+            'class': 'logging.StreamHandler',
+            'formatter': 'console'  # Simple format for console
+        },
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            # Ensure the log file is in the root of your Django project
+            'filename': os.path.join(BASE_DIR, 'debug.log'),
+            'formatter': 'simple'  # Detailed format for file
+        }
+    },
+    'loggers': {
+        '': {  # 'root' logger
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    }
+}

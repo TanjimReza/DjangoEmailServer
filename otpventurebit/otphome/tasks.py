@@ -234,7 +234,7 @@ def check_emails():
                     mail.store(message_id, "+FLAGS", "\\Seen")
                 else:
                     logging.info("Tag: OTHER")
-                    logging.error(f"Subject mismatch: {subject}")
+                    logging.debug(f"Subject mismatch: {subject}")
 
                 email_data = {
                     "from_email": from_email,
@@ -247,7 +247,7 @@ def check_emails():
                     "household_link": household_link,
                     "tag": tag
                 }
-                print("Going to check emails")
+                # print("Going to check emails")
                 if email_data["tag"] == "HOUSEHOLD" or email_data["tag"] == "LOGIN":
                     try:
                         print(f"Email saving: {email_data['tag']}, {
@@ -256,7 +256,7 @@ def check_emails():
                     except Exception as e:
                         logging.error(f"Error in save_email_to_db: {e}")
                 else:
-                    print(f"Email not saved: {email_data['tag']}")
+                    # print(f"Email not saved: {email_data['tag']}")
                     # ? Logging Email Data (except email_body)
                     log_dict = {k: v for k, v in email_data.items()
                                 if k != "email_body"}

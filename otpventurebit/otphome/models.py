@@ -27,24 +27,39 @@ class Email(models.Model):
 
     def save(self, *args, **kwargs):
         if isinstance(self.date_time, str):
-            # Parse the date-time string to a datetime object
-            parsed_date_time = datetime.strptime(
-                self.date_time, '%Y-%m-%d %H:%M:%S')
-            # Make the datetime object timezone aware if it is not already
-            if not is_aware(parsed_date_time):
-                parsed_date_time = make_aware(
-                    parsed_date_time, get_default_timezone())
-            self.date_time = parsed_date_time
-
+            try:
+                parsed_date_time = datetime.strptime(
+                    self.date_time, '%Y-%m-%d %H:%M:%S')
+                if not is_aware(parsed_date_time):
+                    parsed_date_time = make_aware(
+                        parsed_date_time, get_default_timezone())
+                self.date_time = parsed_date_time
+            except ValueError as e:
+                # Handle incorrect date format
+                raise ValueError(
+                    "Incorrect date format. Please use YYYY-MM-DD HH:MM:SS") from e
         super().save(*args, **kwargs)
 
     @classmethod
-    def get_most_recent_emails_by_tag_and_profile(cls, profile, tag, count=3):
-        return cls.objects.filter(profile=profile, tag=tag).order_by('-date_time')[:count]
+    def get_most_recent_household_emails(cls, account_email, profile_name, count=3):
+        """
+        Retrieve the most recent emails for a given account email and profile name with 'HOUSEHOLD' tag.
+        """
+        return cls.objects.filter(
+            to_email=account_email,
+            profile=profile_name,
+            tag='HOUSEHOLD'
+        ).order_by('-date_time')[:count]
 
     @classmethod
-    def get_most_recent_emails_by_tag_and_email(cls, email, tag, count=3):
-        return cls.objects.filter(to_email=email, tag=tag).order_by('-date_time')[:count]
+    def get_most_recent_login_emails(cls, account_email, count=3):
+        """
+        Retrieve the most recent emails for a given account email with 'LOGIN' tag.
+        """
+        return cls.objects.filter(
+            to_email=account_email,
+            tag='LOGIN'
+        ).order_by('-date_time')[:count]
 
     def __str__(self):
         return f"F:{self.from_email} - T:{self.to_email} - Tag:{self.tag} - Profile:{self.profile}"

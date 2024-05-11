@@ -1,3 +1,4 @@
+import logging
 from time import sleep
 
 import requests
@@ -7,11 +8,13 @@ from django.http import HttpResponse
 from django.shortcuts import render
 
 from .models import Email
-from .tasks import check_emails, normalize_text, get_cleaned_email
+from .tasks import check_emails, normalize_text
 
 check_emails(repeat=settings.REFRESH_TIME_SECONDS)
 
 # Create your views here.
+
+logger = logging.getLogger(__name__)
 
 
 def index(request):
@@ -23,58 +26,62 @@ def index(request):
 
 def hx(request):
     check_profile_name = normalize_text(request.POST['profile_name'])
-    check_profile_email = get_cleaned_email(request.POST['profile_email'])
-    
+    check_profile_email = request.POST['profile_email'].strip().replace(
+        " ", "")
+
     print(check_profile_name, check_profile_email)
+
     OTP_API_URL = settings.SHEET_ACCESS_KEY
 
     params = {
 
         'email': check_profile_email
     }
-    params['email'] = "mezbah.rahman20@gmail.com"
+    result = None
     try:
+        logger.debug("Trying to connect to OTP API with params: %s", params)
         response = requests.get(OTP_API_URL, params=params)
         result = response.json()
         LOGIN_EMAILS = None
         HOUSEHOLD_EMAILS = None
-        
-        if result['result']:
-            profiles_for_this_email = len(
-                result['profileDataArray'])
-            print("🚆 ~ views.py:40 -> profiles_for_this_email: ",profiles_for_this_email)
-            
-            for each_profile in result['profileDataArray']:
-                profile_name = normalize_text(each_profile['ProfileName'])
-                account_email = get_cleaned_email(each_profile['AccountEmail'])
-            
-
     except Exception as e:
-        print(f"Error from OTP API: {e}")
-        return HttpResponse(f"Error from OTP API: Contact Support! {e}")
+        logger.error("Error connecting to OTP API: %s", e)
+        return HttpResponse(f"Something went wrong: Contact VentureBit (Facebook/Email)")
 
-    # if result['profile_email_match']:
-    #     try:
-    #         account_email = result.get(
-    #             'profile_data', {}).get('AccountEmail', '')
-    #
-    #
-    # otp_emails = Email.get_most_recent_otp_emails(account_email, 3)
-    #         household_emails = Email.get_most_recent_household_emails(
-    #             account_email, 3)
-    #
-    #
-    # print(otp_emails)
-    #         print(household_emails)
-    #         print(f"Emails received from Email Database")
-    #         print(f"Generating HTML View")
-    #         return render(request, 'otphome/partials/combined_otp_household.html', {'otp_emails': otp_emails, 'household_emails': household_emails})
+    logger.debug("Response from OTP API: %s", result)
+    try:
+        if not result['valid_result']:
+            logger.info("Invalid Email: %s", check_profile_email)
+            return HttpResponse(f"Invalid Email: {check_profile_email}")
 
-    #     except Exception as e:
-    #         print(f"Error from OTP API: {e}")
-    #         return HttpResponse(f"Error from Email Database: Contact Support!")
+        logger.info("Valid Email: %s", check_profile_email)
+        logger.info("Getting user data...")
 
-    # else:
-    #     print("Profile & Email mismatch! Invalid User!")
-    #     result = 'Profile & Email mismatch! Invalid User!'
-    return HttpResponse(result)
+        for each_profile in result['profileDataArray']:
+            profile_name = normalize_text(each_profile['ProfileName'])
+            account_email = each_profile['AccountEmail']
+
+            logger.debug("Found Profile Name: %s", profile_name)
+            logger.debug("Found Account Email: %s", account_email)
+
+            if profile_name == check_profile_name:
+                print(f"Profile Name Matched: {profile_name}")
+                HOUSEHOLD_EMAILS = Email.get_most_recent_household_emails(
+                    account_email,
+                    profile_name=profile_name,
+                    count=3
+                )
+
+                LOGIN_EMAILS = Email.get_most_recent_login_emails(
+                    account_email,
+                    count=3
+                )
+
+                logger.debug(f"Found {len(HOUSEHOLD_EMAILS)} Household Emails")
+                logger.debug(f"Found {len(LOGIN_EMAILS)} Login Emails")
+
+                return render(request, 'otphome/partials/combined_otp_household.html', {'otp_emails': LOGIN_EMAILS, 'household_emails': HOUSEHOLD_EMAILS})
+    except Exception as e:
+        logger.error("Error after OTP API Request: %s", e)
+
+    return HttpResponse("Error processing your request. Contact Support!")
