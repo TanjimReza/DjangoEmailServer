@@ -42,102 +42,123 @@ def try_except_decorator(func):
     return wrapper
 
 
-@try_except_decorator
 def get_email_body(message):
-    """Extracts the email body from the message."""
-    if message.is_multipart():
-        # Iterate over each part
-        for part in message.walk():
-            content_type = part.get_content_type()
-            content_disposition = str(part.get("Content-Disposition"))
-            if content_type == "text/plain" and "attachment" not in content_disposition:
-                return part.get_payload(decode=True).decode()
-            elif (
-                content_type == "text/html" and "attachment" not in content_disposition
-            ):
-                return part.get_payload(decode=True).decode()
-    else:
-        # Not a multipart email, just return the payload
-        return message.get_payload(decode=True).decode()
+    logging.debug(":::: Inside get_email_body()")
+    try:
+        if message.is_multipart():
+            logging.debug("Email is multipart")
+            for part in message.walk():
+                content_type = part.get_content_type()
+                content_disposition = str(part.get("Content-Disposition"))
+                if content_type == "text/plain" and "attachment" not in content_disposition:
+                    return part.get_payload(decode=True).decode()
+                elif (
+                    content_type == "text/html" and "attachment" not in content_disposition
+                ):
+                    return part.get_payload(decode=True).decode()
+        else:
+            return message.get_payload(decode=True).decode()
+    except Exception as e:
+        logging.error(f"Error in get_email_body: {e}")
 
 
-@try_except_decorator
 def get_login_otp_from_email(email_body):
     """Extracts the login OTP from the email body."""
-    pattern = r"Enter this code to sign in\s+(\d+)"
-    match = re.search(pattern, email_body)
-    if match:
-        sign_in_code = match.group(1)
-        print(f"Sign-in code: {sign_in_code}")
-        return sign_in_code
-    return None
+    logging.debug(":::: Inside get_login_otp_from_email()")
+    try:
+        pattern = r"Enter this code to sign in\s+(\d+)"
+        match = re.search(pattern, email_body)
+        if match:
+            logging.debug("-- OTP Found")
+            sign_in_code = match.group(1)
+            print(f"-- OTP: {sign_in_code}")
+            return sign_in_code
+        return None
+    except Exception as e:
+        logging.error(f"Error in get_login_otp_from_email: {e}")
 
 
-@try_except_decorator
 def get_household_url_from_email(email_body):
-    get_code_url = None
-    # Regular expression pattern to match the "Get Code URL"
-    # url_pattern = r"Get Code\s*<(https?://[\w/\.\-_\?=&%]+[^>]+)>"
-    url_pattern = r"Get Code\s*\[?(https?://[\w/\.\-_\?=&%]+[^>\]\s]+)"
+    logging.debug(":::: Inside get_household_url_from_email()")
+    try:
+        get_code_url = None
+        # Regular expression pattern to match the "Get Code URL"
+        # url_pattern = r"Get Code\s*<(https?://[\w/\.\-_\?=&%]+[^>]+)>"
+        url_pattern = r"Get Code\s*\[?(https?://[\w/\.\-_\?=&%]+[^>\]\s]+)"
+        # Search for the "Get Code URL"
+        url_match = re.search(url_pattern, email_body, re.DOTALL)
+        if url_match:
+            logging.debug("-- Link Found")
+            get_code_url = url_match.group(1)
+            print(f"-- Get Code URL: {get_code_url}")
+        return get_code_url
+    except Exception as e:
+        logging.error(f"Error in get_household_url_from_email: {e}")
 
-    # Search for the "Get Code URL"
-    url_match = re.search(url_pattern, email_body, re.DOTALL)
-    if url_match:
-        get_code_url = url_match.group(1)
-        print(f"Get Code URL: {get_code_url}")
-    return get_code_url
 
-
-@try_except_decorator
 def get_profile_name_from_email(email_body):
-    profile = None
-    hi_pattern = r"Hi (.*?),"
+    """Extracts the profile name from the email body."""
+    logging.debug(":::: Inside get_profile_name_from_email()")
+    try:
+        profile = None
+        hi_pattern = r"Hi (.*?),"
+        hi_match = re.search(hi_pattern, email_body, re.DOTALL)
+        if hi_match:
+            profile = hi_match.group(1)
+            print(f"Profile: {profile}")
+            logging.debug("-- Profile:", profile)
+        return profile
+    except Exception as e:
+        logging.error(f"Error in get_profile_name_from_email: {e}")
 
-    hi_match = re.search(hi_pattern, email_body, re.DOTALL)
-    if hi_match:
-        profile = hi_match.group(1)
-        print(f"Profile: {profile}")
-    return profile
 
-
-@try_except_decorator
 def get_cleaned_email(email_address):
-    email_pattern = r"<([^>]+@[^>]+)>"
-    email_body = re.search(email_pattern, email_address).group(1)
-    return email_body
+    try:
+        email_pattern = r"<([^>]+@[^>]+)>"
+        email_body = re.search(email_pattern, email_address).group(1)
+        return email_body
+    except Exception as e:
+        logging.error(f"Error in get_cleaned_email: {e}")
 
 
-@try_except_decorator
 def save_email_to_db(email_data):
-    new_email = Email.objects.create(
-        from_email=email_data["from_email"],
-        to_email=email_data["to_email"],
-        subject=email_data["subject"],
-        profile=normalize_text(
-            email_data["profile"]) if email_data["profile"] else None,
-        date_time=email_data["date_time"],
-        body=email_data["email_body"],
-        login_otp=email_data["login_otp"],
-        household_link=email_data["household_link"],
-        tag=email_data["tag"]
-    )
-    new_email.save()
+    #! Very Important
+    try:
+        new_email = Email.objects.create(
+            from_email=email_data["from_email"],
+            to_email=email_data["to_email"],
+            subject=email_data["subject"],
+            profile=normalize_text(
+                email_data["profile"]) if email_data["profile"] else None,
+            date_time=email_data["date_time"],
+            body=email_data["email_body"],
+            login_otp=email_data["login_otp"],
+            household_link=email_data["household_link"],
+            tag=email_data["tag"]
+        )
+        new_email.save()
+        logging.debug(f"Saved email to database: {new_email}")
+    except Exception as e:
+        logging.error(f"Error in save_email_to_db: {e}")
 
     print(f"Saved email to database: {new_email}")
 
 
 def normalize_text(text: str):
-    text = text.lower()  # ? Convert to lowercase
-    text = text.strip()  # ? Remove leading/trailing whitespace
-    text = text.replace(" ", "")  # ? Remove spaces
-    text = text.replace(":", "")  # ? Remove colons
-    text = text.replace(".", "")  # ? Remove dots
-    text = text.replace("-", "")  # ? Remove dashes
-    text = text.replace("_", "")  # ? Remove underscores
-    text = text.replace("(", "")  # ? Remove parentheses
-    text = text.replace(")", "")  # ? Remove parentheses
-    text = text.replace("?", "")  # ? Remove slashes
-    return text
+    try:
+        text = text.lower()  # ? Convert to lowercase
+        text = text.strip()  # ? Remove leading/trailing whitespace
+        text = text.replace(" ", "")  # ? Remove spaces
+        text = text.replace(":", "")  # ? Remove colons
+        text = text.replace(".", "")  # ? Remove dots
+        text = text.replace("-", "")  # ? Remove dashes
+        text = text.replace("_", "")  # ? Remove underscores
+        text = text.replace("(", "")  # ? Remove parentheses
+        text = text.replace(")", "")  # ? Remove parentheses
+        text = text.replace("?", "")  # ? Remove slashes
+        return text
+    except Exception as e:
+        logging.error(f"Error in normalize_text: {e}")
 
 
 @background(schedule=settings.REFRESH_TIME_SECONDS)
@@ -155,24 +176,28 @@ def check_emails():
                 return
             # * If there are new emails, fetch them
             for idx, message_id in enumerate(message_ids):
+                try:
+                    # ? Peeking, RFC822 by defualt marks as read
+                    typ, data = mail.fetch(message_id, "(BODY.PEEK[])")
 
-                # ? Peeking, RFC822 by defualt marks as read
-                typ, data = mail.fetch(message_id, "(BODY.PEEK[])")
+                    msg = email.message_from_bytes(data[0][1])
 
-                msg = email.message_from_bytes(data[0][1])
+                    # ? Sender Email
+                    from_email = get_cleaned_email(
+                        # ! No idea why wrote like this
+                        decode_header(msg["From"])[0][0]
+                    ) or decode_header(msg["From"])[0][0]
 
-                # ? Sender Email
-                from_email = get_cleaned_email(
-                    # ! No idea why wrote like this
-                    decode_header(msg["From"])[0][0]
-                ) or decode_header(msg["From"])[0][0]
+                    # ? Receiver Email
+                    to_email = decode_header(msg["To"])[0][0]
 
-                # ? Receiver Email
-                to_email = decode_header(msg["To"])[0][0]
-
-                # ? Formatted Date-Time Object for better management
-                date_time = parsedate_to_datetime(
-                    msg["Date"]).strftime("%Y-%m-%d %H:%M:%S")
+                    # ? Formatted Date-Time Object for better management
+                    date_time = parsedate_to_datetime(
+                        msg["Date"]).strftime("%Y-%m-%d %H:%M:%S")
+                except Exception as e:
+                    logging.error(f"Error in fetching email: {e}")
+                    logging.error(f"Message ID: {message_id}")
+                    continue
 
                 try:
                     email_body = get_email_body(msg)
@@ -226,7 +251,7 @@ def check_emails():
                 if email_data["tag"] == "HOUSEHOLD" or email_data["tag"] == "LOGIN":
                     try:
                         print(f"Email saving: {email_data['tag']}, {
-                              email_data['profile']}")
+                            email_data['profile']}")
                         save_email_to_db(email_data)
                     except Exception as e:
                         logging.error(f"Error in save_email_to_db: {e}")
