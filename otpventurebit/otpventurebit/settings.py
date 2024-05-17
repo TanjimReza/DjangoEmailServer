@@ -167,39 +167,38 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # logger.warning('This is a warning message')
 # logger.error('This is an error message')
 # logger.critical('This is a critical message')
+LOG_DIR = os.path.join(os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__))), 'logs')
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'simple': {
-            'format': '{levelname}-{asctime}-{message}',
+        'detailed': {
+            'format': '{asctime} - {levelname} - {message}',
             'style': '{',
-            'datefmt': '%d:%m:%Y: %H:%M:%S'
-        },
-        'console': {
-            'format': '{levelname} : {message}',
-            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S'
         }
     },
     'handlers': {
-        'console': {
-            'level': 'WARNING',
-            'class': 'logging.StreamHandler',
-            'formatter': 'console'  # Simple format for console
-        },
         'file': {
-            'level': 'DEBUG',
+            'level': 'DEBUG',  # Capture all messages starting from DEBUG level
             'class': 'logging.FileHandler',
-            # Ensure the log file is in the root of your Django project
-            'filename': os.path.join(BASE_DIR, 'debug.log'),
-            'formatter': 'simple'  # Detailed format for file
+            'filename': os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs/app.log'),
+            'formatter': 'detailed',
         }
     },
     'loggers': {
-        '': {  # 'root' logger
-            'handlers': ['console', 'file'],
-            'level': 'DEBUG',
-            'propagate': True,
+        '': {  # This is the root logger
+            'handlers': ['file'],
+            'level': 'DEBUG',  # Set the logger to capture from DEBUG level
+            'propagate': False,  # Avoid passing logs to the default logger
         },
     }
 }
+
+# BACKGROUND_TASK = { 
+#     'TASK': 'otphome.tasks.check_emails',
+#     'RUN_EVERY': REFRESH_TIME_SECONDS
+# }

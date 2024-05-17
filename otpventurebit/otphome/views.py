@@ -8,9 +8,9 @@ from django.http import HttpResponse
 from django.shortcuts import render
 
 from .models import Email
-from .tasks import check_emails, normalize_text
+from .tasks import normalize_text
 
-check_emails(repeat=settings.REFRESH_TIME_SECONDS)
+# check_emails(repeat=settings.REFRESH_TIME_SECONDS)
 
 # Create your views here.
 

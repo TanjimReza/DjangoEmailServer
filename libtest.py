@@ -1,327 +1,270 @@
-# -*- coding: utf-8 -*-
-from __future__ import unicode_literals
-
-from datetime import datetime, timedelta
-from importlib import import_module
-from multiprocessing.pool import ThreadPool
+import email
+import imaplib
 import logging
 import os
-import sys
+import re
+import time
+from email.header import decode_header
+from email.utils import parsedate_to_datetime
+from functools import wraps
 
-from django.apps import apps
-from django.db.utils import OperationalError
-from django.utils import timezone
-from six import python_2_unicode_compatible
+import schedule
+from background_task import background
+from django.conf import settings
+from dotenv import load_dotenv
 
-from background_task.exceptions import BackgroundTaskError
-from background_task.models import Task
-from background_task.settings import app_settings
-from background_task import signals
+from .models import Email
 
+# Set up logging
+logging.basicConfig(
+    filename="email_checker.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
 
-
-from importlib import import_module
-from importlib.util import find_spec
-from django.apps import apps
 logger = logging.getLogger(__name__)
 
+EMAIL_SERVER = settings.EMAIL_SERVER
+EMAIL_ACCOUNT = settings.EMAIL_ACCOUNT
+EMAIL_PASSWORD = settings.EMAIL_PASSWORD
+EMAIL_FILTER = settings.EMAIL_FILTER
+REFRESH_TIME_SECONDS = settings.REFRESH_TIME_SECONDS
+HOUSEHOLD_SUBJECT = settings.HOUSEHOLD_SUBJECT
+LOGIN_SUBJECT = settings.LOGIN_SUBJECT
 
-def bg_runner(proxy_task, task=None, *args, **kwargs):
-    """
-    Executes the function attached to task. Used to enable threads.
-    If a Task instance is provided, args and kwargs are ignored and retrieved from the Task itself.
-    """
-    signals.task_started.send(Task)
+
+def try_except_decorator(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logging.error(f"Error in {func.__name__}: {e}")
+
+    return wrapper
+
+
+def get_email_body(message):
+    logger.debug(":::: Inside get_email_body()")
     try:
-        func = getattr(proxy_task, 'task_function', None)
-        if isinstance(task, Task):
-            args, kwargs = task.params()
+        if message.is_multipart():
+            logger.debug("Email is multipart")
+            for part in message.walk():
+                content_type = part.get_content_type()
+                content_disposition = str(part.get("Content-Disposition"))
+                if content_type == "text/plain" and "attachment" not in content_disposition:
+                    return part.get_payload(decode=True).decode()
+                elif (
+                    content_type == "text/html" and "attachment" not in content_disposition
+                ):
+                    return part.get_payload(decode=True).decode()
         else:
-            task_name = getattr(proxy_task, 'name', None)
-            task_queue = getattr(proxy_task, 'queue', None)
-            task_qs = Task.objects.get_task(task_name=task_name, args=args, kwargs=kwargs)
-            if task_queue:
-                task_qs = task_qs.filter(queue=task_queue)
-            if task_qs:
-                task = task_qs[0]
-        if func is None:
-            raise BackgroundTaskError("Function is None, can't execute!")
-        func(*args, **kwargs)
-
-        if task:
-            # task done, so can delete it
-            task.increment_attempts()
-            completed = task.create_completed_task()
-            signals.task_successful.send(sender=task.__class__, task_id=task.id, completed_task=completed)
-            task.create_repetition()
-            task.delete()
-            logger.info('Ran task and deleting %s\n', task)
-
-    except Exception as ex:
-        t, e, traceback = sys.exc_info()
-        if task:
-            logger.error('Rescheduling %s\n', task, exc_info=(t, e, traceback))
-            signals.task_error.send(sender=ex.__class__, task=task)
-            task.reschedule(t, e, traceback)
-        del traceback
-    signals.task_finished.send(Task)
+            return message.get_payload(decode=True).decode()
+    except Exception as e:
+        logger.error(f"Error in get_email_body: {e}")
 
 
-class PoolRunner:
-    def __init__(self, bg_runner, num_processes):
-        self._bg_runner = bg_runner
-        self._num_processes = num_processes
-
-    _pool_instance = None
-
-    @property
-    def _pool(self):
-        if not self._pool_instance:
-            self._pool_instance = ThreadPool(processes=self._num_processes)
-        return self._pool_instance
-
-    def run(self, proxy_task, task=None, *args, **kwargs):
-        self._pool.apply_async(func=self._bg_runner, args=(proxy_task, task) + tuple(args), kwds=kwargs)
-
-    __call__ = run
+def get_login_otp_from_email(email_body):
+    """Extracts the login OTP from the email body."""
+    logger.debug(":::: Inside get_login_otp_from_email()")
+    try:
+        pattern = r"Enter this code to sign in\s+(\d+)"
+        match = re.search(pattern, email_body)
+        if match:
+            logger.debug("-- OTP Found")
+            sign_in_code = match.group(1)
+            print(f"-- OTP: {sign_in_code}")
+            return sign_in_code
+        return None
+    except Exception as e:
+        logger.error(f"Error in get_login_otp_from_email: {e}")
 
 
-class Tasks(object):
-    def __init__(self):
-        self._tasks = {}
-        self._runner = DBTaskRunner()
-        self._task_proxy_class = TaskProxy
-        self._bg_runner = bg_runner
-        self._pool_runner = PoolRunner(bg_runner, app_settings.BACKGROUND_TASK_ASYNC_THREADS)
-
-    def background(self, name=None, schedule=None, queue=None,
-                   remove_existing_tasks=False):
-        '''
-        decorator to turn a regular function into
-        something that gets run asynchronously in
-        the background, at a later time
-        '''
-
-        # see if used as simple decorator
-        # where first arg is the function to be decorated
-        fn = None
-        if name and callable(name):
-            fn = name
-            name = None
-
-        def _decorator(fn):
-            _name = name
-            if not _name:
-                _name = '%s.%s' % (fn.__module__, fn.__name__)
-            proxy = self._task_proxy_class(_name, fn, schedule, queue,
-                                           remove_existing_tasks, self._runner)
-            self._tasks[_name] = proxy
-            return proxy
-        if fn:
-            return _decorator(fn)
-
-        return _decorator
-
-    def run_task(self, task_name, args=None, kwargs=None):
-        # task_name can be either the name of a task or a Task instance.
-        if isinstance(task_name, Task):
-            task = task_name
-            task_name = task.task_name
-            # When we have a Task instance we do not need args and kwargs, but
-            # they are kept for backward compatibility
-            args = []
-            kwargs = {}
-        else:
-            task = None
-        proxy_task = self._tasks[task_name]
-        if app_settings.BACKGROUND_TASK_RUN_ASYNC:
-            self._pool_runner(proxy_task, task, *args, **kwargs)
-        else:
-            self._bg_runner(proxy_task, task, *args, **kwargs)
-
-    def run_next_task(self, queue=None):
-        return self._runner.run_next_task(self, queue)
+def get_household_url_from_email(email_body):
+    logger.debug(":::: Inside get_household_url_from_email()")
+    try:
+        get_code_url = None
+        # Regular expression pattern to match the "Get Code URL"
+        # url_pattern = r"Get Code\s*<(https?://[\w/\.\-_\?=&%]+[^>]+)>"
+        url_pattern = r"Get Code\s*\[?(https?://[\w/\.\-_\?=&%]+[^>\]\s]+)"
+        # Search for the "Get Code URL"
+        url_match = re.search(url_pattern, email_body, re.DOTALL)
+        if url_match:
+            logger.debug("-- Link Found")
+            get_code_url = url_match.group(1)
+            print(f"-- Get Code URL: {get_code_url}")
+        return get_code_url
+    except Exception as e:
+        logger.error(f"Error in get_household_url_from_email: {e}")
 
 
-class TaskSchedule(object):
-    SCHEDULE = 0
-    RESCHEDULE_EXISTING = 1
-    CHECK_EXISTING = 2
-
-    def __init__(self, run_at=None, priority=None, action=None):
-        self._run_at = run_at
-        self._priority = priority
-        self._action = action
-
-    @classmethod
-    def create(self, schedule):
-        if isinstance(schedule, TaskSchedule):
-            return schedule
-        priority = None
-        run_at = None
-        action = None
-
-        if schedule:
-            if isinstance(schedule, (int, timedelta, datetime)):
-                run_at = schedule
-            else:
-                run_at = schedule.get('run_at', None)
-                priority = schedule.get('priority', None)
-                action = schedule.get('action', None)
-
-        return TaskSchedule(run_at=run_at, priority=priority, action=action)
-
-    def merge(self, schedule):
-        params = {}
-        for name in ['run_at', 'priority', 'action']:
-            attr_name = '_%s' % name
-            value = getattr(self, attr_name, None)
-            if value is None:
-                params[name] = getattr(schedule, attr_name, None)
-            else:
-                params[name] = value
-        return TaskSchedule(**params)
-
-    @property
-    def run_at(self):
-        run_at = self._run_at or timezone.now()
-        if isinstance(run_at, int):
-            run_at = timezone.now() + timedelta(seconds=run_at)
-        if isinstance(run_at, timedelta):
-            run_at = timezone.now() + run_at
-        return run_at
-
-    @property
-    def priority(self):
-        return self._priority or 0
-
-    @property
-    def action(self):
-        return self._action or TaskSchedule.SCHEDULE
+def get_profile_name_from_email(email_body):
+    """Extracts the profile name from the email body."""
+    logger.debug(":::: Inside get_profile_name_from_email()")
+    try:
+        profile = None
+        hi_pattern = r"Hi (.*?),"
+        hi_match = re.search(hi_pattern, email_body, re.DOTALL)
+        if hi_match:
+            profile = hi_match.group(1)
+            print(f"Profile: {profile}")
+            logger.debug("-- Profile:", profile)
+        return profile
+    except Exception as e:
+        logger.error(f"Error in get_profile_name_from_email: {e}")
 
 
-    def __repr__(self):
-        return 'TaskSchedule(run_at=%s, priority=%s)' % (self._run_at,
-                                                         self._priority)
+def get_cleaned_email(email_address):
+    try:
+        email_pattern = r"<([^>]+@[^>]+)>"
+        email_body = re.search(email_pattern, email_address).group(1)
+        return email_body
+    except Exception as e:
+        logger.error(f"Error in get_cleaned_email: {e}")
 
-    def __eq__(self, other):
-        return self._run_at == other._run_at \
-           and self._priority == other._priority \
-           and self._action == other._action
+
+def save_email_to_db(email_data):
+    #! Very Important
+    try:
+        logger.error("TRYING TO SAVE", email_data)
+        new_email = Email.objects.create(
+            from_email=email_data["from_email"],
+            to_email=email_data["to_email"],
+            subject=email_data["subject"],
+            profile=normalize_text(
+                email_data["profile"]) if email_data["profile"] else None,
+            date_time=email_data["date_time"],
+            body=email_data["email_body"],
+            login_otp=email_data["login_otp"],
+            household_link=email_data["household_link"],
+            tag=email_data["tag"]
+        )
+        new_email.save()
+        logger.debug(f"Saved email to database: {new_email}")
+    except Exception as e:
+        logger.error(f"Error in save_email_to_db: {e}")
+
+    print(f"Saved email to database: {new_email}")
 
 
-class DBTaskRunner(object):
-    '''
-    Encapsulate the model related logic in here, in case
-    we want to support different queues in the future
-    '''
+def normalize_text(text: str):
+    try:
+        text = text.lower()  # ? Convert to lowercase
+        text = text.strip()  # ? Remove leading/trailing whitespace
+        text = text.replace(" ", "")  # ? Remove spaces
+        text = text.replace(":", "")  # ? Remove colons
+        text = text.replace(".", "")  # ? Remove dots
+        text = text.replace("-", "")  # ? Remove dashes
+        text = text.replace("_", "")  # ? Remove underscores
+        text = text.replace("(", "")  # ? Remove parentheses
+        text = text.replace(")", "")  # ? Remove parentheses
+        text = text.replace("?", "")  # ? Remove slashes
+        return text
+    except Exception as e:
+        logger.error(f"Error in normalize_text: {e}")
 
-    def __init__(self):
-        self.worker_name = str(os.getpid())
 
-    def schedule(self, task_name, args, kwargs, run_at=None,
-                 priority=0, action=TaskSchedule.SCHEDULE, queue=None,
-                 verbose_name=None, creator=None,
-                 repeat=None, repeat_until=None, remove_existing_tasks=False):
-        '''Simply create a task object in the database'''
-        task = Task.objects.new_task(task_name, args, kwargs, run_at, priority,
-                                     queue, verbose_name, creator, repeat,
-                                     repeat_until, remove_existing_tasks)
-        if action != TaskSchedule.SCHEDULE:
-            task_hash = task.task_hash
-            now = timezone.now()
-            unlocked = Task.objects.unlocked(now)
-            existing = unlocked.filter(task_hash=task_hash)
-            if queue:
-                existing = existing.filter(queue=queue)
-            if action == TaskSchedule.RESCHEDULE_EXISTING:
-                updated = existing.update(run_at=run_at, priority=priority)
-                if updated:
-                    return
-            elif action == TaskSchedule.CHECK_EXISTING:
-                if existing.count():
-                    return
-
-        task.save()
-        signals.task_created.send(sender=self.__class__, task=task)
-        return task
-
-    def get_task_to_run(self, tasks, queue=None):
+@background(schedule=settings.REFRESH_TIME_SECONDS)
+def check_emails():
+    logger.error("Inside CheckEmails")
+    with imaplib.IMAP4_SSL(EMAIL_SERVER) as mail:
+        mail.login(EMAIL_ACCOUNT, EMAIL_PASSWORD)
+        mail.select("inbox")
         try:
-            available_tasks = [task for task in Task.objects.find_available(queue)
-                               if task.task_name in tasks._tasks][:5]
-            for task in available_tasks:
-                # try to lock task
-                locked_task = task.lock(self.worker_name)
-                if locked_task:
-                    return locked_task
-            return None
-        except OperationalError:
-            logger.warning('Failed to retrieve tasks. Database unreachable.\n')
+            typ, messages = mail.search(None, EMAIL_FILTER)
+            message_ids = messages[0].split()
 
-    def run_task(self, tasks, task):
-        logger.info('Running %s', task)
-        tasks.run_task(task)
+            # ? If there are no new emails, return
+            if not message_ids:
+                logger.error("No new emails found.")
+                return
+            # * If there are new emails, fetch them
+            for idx, message_id in enumerate(message_ids):
+                try:
+                    # ? Peeking, RFC822 by defualt marks as read
+                    typ, data = mail.fetch(message_id, "(BODY.PEEK[])")
 
-    def run_next_task(self, tasks, queue=None):
-        task = self.get_task_to_run(tasks, queue)
-        if task:
-            self.run_task(tasks, task)
-            return True
-        else:
-            return False
+                    msg = email.message_from_bytes(data[0][1])
 
+                    # ? Sender Email
+                    from_email = get_cleaned_email(
+                        # ! No idea why wrote like this
+                        decode_header(msg["From"])[0][0]
+                    ) or decode_header(msg["From"])[0][0]
 
-@python_2_unicode_compatible
-class TaskProxy(object):
-    def __init__(self, name, task_function, schedule, queue, remove_existing_tasks, runner):
-        self.name = name
-        self.now = self.task_function = task_function
-        self.runner = runner
-        self.schedule = TaskSchedule.create(schedule)
-        self.queue = queue
-        self.remove_existing_tasks = remove_existing_tasks
+                    # ? Receiver Email
+                    to_email = decode_header(msg["To"])[0][0]
 
+                    # ? Formatted Date-Time Object for better management
+                    date_time = parsedate_to_datetime(
+                        msg["Date"]).strftime("%Y-%m-%d %H:%M:%S")
+                except Exception as e:
+                    logger.error(f"Error in fetching email: {e}")
+                    logger.error(f"Message ID: {message_id}")
+                    continue
 
-    def __call__(self, *args, **kwargs):
-        schedule = kwargs.pop('schedule', None)
-        schedule = TaskSchedule.create(schedule).merge(self.schedule)
-        run_at = schedule.run_at
-        priority = kwargs.pop('priority', schedule.priority)
-        action = schedule.action
-        queue = kwargs.pop('queue', self.queue)
-        verbose_name = kwargs.pop('verbose_name', None)
-        creator = kwargs.pop('creator', None)
-        repeat = kwargs.pop('repeat', None)
-        repeat_until = kwargs.pop('repeat_until', None)
-        remove_existing_tasks =  kwargs.pop('remove_existing_tasks', self.remove_existing_tasks)
+                try:
+                    email_body = get_email_body(msg)
+                except Exception as e:
+                    logger.error(f"Error in get_email_body: {e}")
+                    email_body = "EMPTY EMAIL BODY"
 
-        return self.runner.schedule(self.name, args, kwargs, run_at, priority,
-                                    action, queue, verbose_name, creator,
-                                    repeat, repeat_until,
-                                    remove_existing_tasks)
+                # ? Email Subject: Can be used to determine Email TAG (OTHER, LOGIN, HOUSEHOLD)
+                subject, subject_encoding = decode_header(msg["Subject"])[0]
 
-    def __str__(self):
-        return 'TaskProxy(%s)' % self.name
+                # print(f"Subject: {subject}")
+                logger.info("-"*30)
+                logger.info(f"Email #{idx + 1}")
+                logger.info(f"Subject: {subject}")
 
-tasks = Tasks()
+                tag = None  # ? By default None - HOUSEHOLD, LOGIN
+                profile = None
+                login_otp = None
+                household_link = None
 
+                if normalize_text(LOGIN_SUBJECT) in normalize_text(subject):
+                    tag = "LOGIN"
+                    logger.info("Tag: LOGIN")
+                    login_otp = get_login_otp_from_email(email_body)
+                    #! Marking as read
+                    mail.store(message_id, "+FLAGS", "\\Seen")
 
-def autodiscover():
-    """
-    Autodiscover tasks.py files in much the same way as admin app
-    """
-    import imp
-    from django.conf import settings
+                elif normalize_text(HOUSEHOLD_SUBJECT) in normalize_text(subject):
+                    tag = "HOUSEHOLD"
+                    logger.info("Tag: HOUSEHOLD")
+                    profile = get_profile_name_from_email(email_body)
+                    household_link = get_household_url_from_email(email_body)
+                    #! Marking as read
+                    mail.store(message_id, "+FLAGS", "\\Seen")
+                else:
+                    logger.info("Tag: OTHER")
+                    logger.debug(f"Subject mismatch: {subject}")
 
-    for app_config in apps.get_app_configs():
-        try:
-            app_path = import_module(app_config.name).__path__
-        except (AttributeError, ImportError):
-            continue
-        try:
-            imp.find_module('tasks', app_path)
-        except ImportError:
-            continue
+                email_data = {
+                    "from_email": from_email,
+                    "to_email": to_email,
+                    "subject": subject,
+                    "profile": profile,
+                    "date_time": date_time,
+                    "email_body": email_body,
+                    "login_otp": login_otp,
+                    "household_link": household_link,
+                    "tag": tag
+                }
+                # print("Going to check emails")
+                if email_data["tag"] == "HOUSEHOLD" or email_data["tag"] == "LOGIN":
+                    try:
+                        print(f"Email saving: {email_data['tag']}, {
+                              email_data['profile']}")
+                        save_email_to_db(email_data)
+                    except Exception as e:
+                        logger.error(f"Error in save_email_to_db: {e}")
+                else:
+                    # print(f"Email not saved: {email_data['tag']}")
+                    # ? logger Email Data (except email_body)
+                    log_dict = {k: v for k, v in email_data.items()
+                                if k != "email_body"}
+                    logger.info(f"Email Data: {log_dict}")
 
-        import_module("%s.tasks" % app_config.name)
+        except Exception as e:
+            print(f"Exception from check_emails: {e}")
