@@ -73,3 +73,21 @@ class Email(models.Model):
 
     # def __str__(self):
     #     return f"F:{self.from_email} - T:{self.to_email} - T:{self.tag}"
+
+
+class BandwidthLog(models.Model):
+    timestamp = models.DateTimeField(auto_now_add=True)
+    function_name = models.CharField(max_length=255)
+    bytes_sent = models.BigIntegerField()
+    bytes_received = models.BigIntegerField()
+    total_bytes = models.BigIntegerField()
+    total_mb = models.FloatField()
+
+    def __str__(self):
+        return f"{self.function_name} - {self.total_mb:.2f} MB on {self.timestamp}"
+
+    @classmethod
+    def total_bandwidth_usage(cls):
+        total_usage = cls.objects.aggregate(
+            total=models.Sum('total_mb'))['total'] or 0.0
+        return total_usage
