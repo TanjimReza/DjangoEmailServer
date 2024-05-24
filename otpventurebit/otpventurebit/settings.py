@@ -136,7 +136,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 CSRF_TRUSTED_ORIGINS = ["https://otp.venturebit.net", "https://otp.venturebit.net/admin", "https://otp.venturebit.net/admin/",
-                        "https://otp.venturebit.net", "https://cdn.tailwindcss.com", "https://*.venturebit.net", "http://localhost"]
+                        "https://otp.venturebit.net", "https://cdn.tailwindcss.com", "https://*.venturebit.net", "http://localhost", "http://localhost:5173"]
 
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -198,7 +198,7 @@ LOGGING = {
     }
 }
 
-# BACKGROUND_TASK = { 
+# BACKGROUND_TASK = {
 #     'TASK': 'otphome.tasks.check_emails',
 #     'RUN_EVERY': REFRESH_TIME_SECONDS
 # }

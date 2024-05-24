@@ -1,19 +1,20 @@
+import json
 import logging
 from time import sleep
 
 import requests
 from background_task import background
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
 
-from .models import Email
-from .models import BandwidthLog
+from .models import BandwidthLog, Email
 from .tasks import normalize_text
-from .utils.email_utils import check_emails
 from .utils.bandwidth_util import measure_bandwidth
-# check_emails(repeat=settings.REFRESH_TIME_SECONDS)
+from .utils.email_utils import check_emails
 
+# check_emails(repeat=settings.REFRESH_TIME_SECONDS)
 
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ def bandwidth_log(request):
     }
     return render(request, 'otphome/bandwidth.html', context)
 
+
 def index(request):
     if request.method == 'POST' or request.method == 'GET':
         print(request.POST or request.GET)
@@ -34,7 +36,32 @@ def index(request):
     return render(request, 'otphome/index.html')
 
 
+@csrf_exempt
+def test_api(request):
+    if request.method == 'POST':
+        print(request.body)
+        body = json.loads(request.body)
+        profile_name = body.get('profile_name', None)
+        profile_email = body.get('profile_email', None)
+        result = {
+            'success': True,
+            'message': 'Success',
+            'data_1': {
+                'a': 'b',
+                'profile_name': profile_name,
+            },
+            'data_2': {
+                'c': 'd',
+                'profile_email': profile_email,
+            }
+        }
+        return JsonResponse(result)
 
+    result = {
+        'success': False,
+        'message': 'Error',
+    }
+    return JsonResponse(result)
 
 
 def hx(request):
@@ -67,7 +94,6 @@ def hx(request):
             logger.info("Invalid Email: %s", check_profile_email)
             return HttpResponse(f"Invalid Email: {check_profile_email}")
 
-        
         logger.info("Valid Email: %s", check_profile_email)
         logger.info("Getting user data...")
 
@@ -80,16 +106,15 @@ def hx(request):
 
             if profile_name == check_profile_name:
                 print(f"Profile Name Matched: {profile_name}")
-                
+
                 print(f"Checking for new emails...")
-                
-                try: 
+
+                try:
                     check_emails()
                     print("Emails Checked!")
                 except Exception as e:
                     logger.error("Error checking for new emails: %s", e)
-                        
-                
+
                 HOUSEHOLD_EMAILS = Email.get_most_recent_household_emails(
                     account_email,
                     profile_name=profile_name,

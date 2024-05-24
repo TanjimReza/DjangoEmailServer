@@ -8,4 +8,5 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('hx', views.hx, name='hx'),
     path('bandwidth', views.bandwidth_log, name='bandwidth_log'),
+    path('test_api', views.test_api, name='test_api'),
 ] +  static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
